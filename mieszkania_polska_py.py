@@ -8,7 +8,7 @@
 
 # ── 0. IMPORTY ───────────────────────────────────────────────
 # Wymagane pakiety (uruchom raz w terminalu jeśli brakuje):
-# pip install pandas numpy matplotlib seaborn statsmodels scipy openpyxl pmdarima
+# pip install pandas numpy matplotlib seaborn statsmodels scipy openpyxl pmdarima docx
 
 import os
 import numpy as np
@@ -40,11 +40,10 @@ except ImportError:
     print("   Zainstaluj: pip install pmdarima")
 
 # ── ŚCIEŻKA DO DANYCH ────────────────────────────────────────
-try:
-    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-except NameError:
-    SCRIPT_DIR = r"C:\Users\Patryk\Desktop\studia magisterskie\Prognozowanie i symulacje\Projekt"
-DATA_FILE = os.path.join(SCRIPT_DIR, "mieszkania_polska.xlsx")
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent if "__file__" in globals() else Path.cwd()
+DATA_FILE = SCRIPT_DIR / "mieszkania_polska.xlsx"
 
 # ── PARAMETRY GLOBALNE ───────────────────────────────────────
 plt.rcParams.update({
@@ -640,7 +639,8 @@ plt.show()
 print("✅ Zapisano: m06_diagnostyka_iter2.png")
 
 # ── M2-F. INTERPRETACJA ─────────────────────────────────────
-p2 = model2.params
+p2 = pd.Series(model2.params, index=model2.model.exog_names)
+
 print(f"\n  Interpretacja – Iteracja 2 (błędy HAC):")
 print(f"  β₁ (NAKL)     = {p2['NAKL']:+.4f}"
       f"  → wzrost nakładów o 1 mln zł → {p2['NAKL']:+.2f} szt.")

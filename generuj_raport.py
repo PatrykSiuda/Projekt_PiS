@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""
-Generuje raport Word z opisem metodologii i wynikami obu analiz.
-Uruchom: py generuj_raport.py
-"""
+#"""
+#Generuje raport Word z opisem metodologii i wynikami obu analiz.
+#Uruchom: py generuj_raport.py
+#"""
 
 import os
 import warnings
@@ -15,6 +15,9 @@ from statsmodels.stats.outliers_influence import variance_inflation_factor
 from scipy.stats import shapiro
 from statsmodels.stats.stattools import jarque_bera
 
+import sys
+import subprocess
+
 from docx import Document
 from docx.shared import Pt, RGBColor, Inches, Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -23,10 +26,9 @@ from docx.oxml import OxmlElement
 
 warnings.filterwarnings("ignore")
 
-try:
-    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-except NameError:
-    SCRIPT_DIR = r"C:\Users\Patryk\Desktop\studia magisterskie\Prognozowanie i symulacje\Projekt"
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent if "__file__" in globals() else Path.cwd()
 
 # ============================================================
 # 1. ŁADOWANIE I PRZYGOTOWANIE DANYCH
