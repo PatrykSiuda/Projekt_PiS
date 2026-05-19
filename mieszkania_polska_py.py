@@ -7,8 +7,8 @@
 # ============================================================
 
 # ── 0. IMPORTY ───────────────────────────────────────────────
-# Wymagane pakiety (uruchom raz w terminalu jeśli brakuje):
-# pip install pandas numpy matplotlib seaborn statsmodels scipy openpyxl pmdarima docx
+# Wymagane pakiety (uruchom raz w !!!!!!R!!!!! NIE PYTHON jeśli brakuje):
+# reticulate::py_install(c("pandas", "numpy", "matplotlib", "seaborn","statsmodels", "scipy", "openpyxl", "pmdarima", "python-docx"))
 
 import os
 import numpy as np

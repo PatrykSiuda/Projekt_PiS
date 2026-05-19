@@ -4,6 +4,11 @@
 #Uruchom: py generuj_raport.py
 #"""
 
+# Wymagane pakiety (uruchom raz w !!!!!!R!!!!! NIE PYTHON jeśli brakuje):
+# reticulate::py_install(c("pandas", "numpy", "matplotlib", "seaborn","statsmodels", "scipy", "openpyxl", "pmdarima", "python-docx"))
+
+
+
 import os
 import warnings
 import numpy as np
