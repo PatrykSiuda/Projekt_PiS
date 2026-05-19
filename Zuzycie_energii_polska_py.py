@@ -10,8 +10,12 @@
 # reticulate::py_install(c("pandas", "numpy", "matplotlib", "seaborn","statsmodels", "scipy", "openpyxl", "pmdarima", "python-docx"))
 
 import os
+import sys
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 import numpy as np
 import pandas as pd
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import seaborn as sns
@@ -117,7 +121,6 @@ for ax, (title, (col, color)) in zip(axes.flat, variables.items()):
 
 plt.tight_layout()
 plt.savefig(os.path.join(SCRIPT_DIR, "01_szeregi_czasowe.png"), bbox_inches="tight")
-plt.show()
 print("✅ Zapisano: 01_szeregi_czasowe.png")
 
 # ── 4. MACIERZ KORELACJI ────────────────────────────────────
@@ -143,7 +146,6 @@ ax.set_xticklabels(labels, rotation=30, ha="right")
 ax.set_yticklabels(labels, rotation=0)
 plt.tight_layout()
 plt.savefig(os.path.join(SCRIPT_DIR, "02_korelacja.png"), bbox_inches="tight")
-plt.show()
 print("✅ Zapisano: 02_korelacja.png")
 
 # ── 5. WYKRESY ROZRZUTU ──────────────────────────────────────
@@ -176,7 +178,6 @@ for ax, (col, xlabel, color) in zip(axes.flat, scatter_vars):
 
 plt.tight_layout()
 plt.savefig(os.path.join(SCRIPT_DIR, "03_scatter.png"), bbox_inches="tight")
-plt.show()
 print("✅ Zapisano: 03_scatter.png")
 
 # ── 6. BUDOWA MODELU OLS ─────────────────────────────────────
@@ -395,7 +396,6 @@ ax.xaxis.set_major_locator(mticker.MultipleLocator(4))
 
 plt.tight_layout()
 plt.savefig(os.path.join(SCRIPT_DIR, "04_diagnostyka.png"), bbox_inches="tight")
-plt.show()
 print("✅ Zapisano: 04_diagnostyka.png")
 
 # ── 10. INTERPRETACJA ANALITYCZNA ───────────────────────────
@@ -533,7 +533,6 @@ ax.set_xlim(2003, 2031)
 
 plt.tight_layout()
 plt.savefig(os.path.join(SCRIPT_DIR, "05_prognoza_warunkowa.png"), bbox_inches="tight")
-plt.show()
 print("✅ Zapisano: 05_prognoza_warunkowa.png")
 
 # ── 13. TABELA PORÓWNAWCZA SCENARIUSZY ───────────────────────
@@ -575,7 +574,6 @@ ax.set_title("Zestawienie prognoz warunkowych 2025–2030 vs bazowy rok 2024",
              fontsize=12, fontweight="bold", pad=10)
 plt.tight_layout()
 plt.savefig(os.path.join(SCRIPT_DIR, "06_tabela_prognoz.png"), bbox_inches="tight")
-plt.show()
 print("✅ Zapisano: 06_tabela_prognoz.png")
 
 # ── 14. WYKRES WSPÓŁCZYNNIKÓW ────────────────────────────────
@@ -611,7 +609,6 @@ for bar, val in zip(bars, coefs.values):
 
 plt.tight_layout()
 plt.savefig(os.path.join(SCRIPT_DIR, "07_wspolczynniki.png"), bbox_inches="tight")
-plt.show()
 print("✅ Zapisano: 07_wspolczynniki.png")
 
 # ── 15. MODEL ARIMA ──────────────────────────────────────────
@@ -795,7 +792,6 @@ axes[2].xaxis.set_major_locator(mticker.MultipleLocator(4))
 
 plt.tight_layout()
 plt.savefig(os.path.join(SCRIPT_DIR, "08_diagnostyka_iter2.png"), bbox_inches="tight")
-plt.show()
 print("✅ Zapisano: 08_diagnostyka_iter2.png")
 
 # ── M2-F. INTERPRETACJA ─────────────────────────────────────

@@ -11,8 +11,12 @@
 # reticulate::py_install(c("pandas", "numpy", "matplotlib", "seaborn","statsmodels", "scipy", "openpyxl", "pmdarima", "python-docx"))
 
 import os
+import sys
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 import numpy as np
 import pandas as pd
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import seaborn as sns
@@ -116,7 +120,6 @@ for ax, (title, (col, color)) in zip(axes.flat, variables.items()):
 
 plt.tight_layout()
 plt.savefig(os.path.join(SCRIPT_DIR, "m01_szeregi_czasowe.png"), bbox_inches="tight")
-plt.show()
 print("✅ Zapisano: m01_szeregi_czasowe.png")
 
 # ── 4. MACIERZ KORELACJI ────────────────────────────────────
@@ -136,7 +139,6 @@ ax.set_xticklabels(labels, rotation=30, ha="right")
 ax.set_yticklabels(labels, rotation=0)
 plt.tight_layout()
 plt.savefig(os.path.join(SCRIPT_DIR, "m02_korelacja.png"), bbox_inches="tight")
-plt.show()
 print("✅ Zapisano: m02_korelacja.png")
 
 # ── 5. WYKRESY ROZRZUTU ──────────────────────────────────────
@@ -170,7 +172,6 @@ for ax, (col, xlabel, color) in zip(axes.flat, scatter_vars):
 
 plt.tight_layout()
 plt.savefig(os.path.join(SCRIPT_DIR, "m03_scatter.png"), bbox_inches="tight")
-plt.show()
 print("✅ Zapisano: m03_scatter.png")
 
 # ── 6. BUDOWA MODELU OLS ─────────────────────────────────────
@@ -388,7 +389,6 @@ ax.xaxis.set_major_locator(mticker.MultipleLocator(4))
 
 plt.tight_layout()
 plt.savefig(os.path.join(SCRIPT_DIR, "m04_diagnostyka.png"), bbox_inches="tight")
-plt.show()
 print("✅ Zapisano: m04_diagnostyka.png")
 
 # ── 10. INTERPRETACJA ANALITYCZNA ───────────────────────────
@@ -451,7 +451,6 @@ for bar, val in zip(bars, coefs.values):
 
 plt.tight_layout()
 plt.savefig(os.path.join(SCRIPT_DIR, "m05_wspolczynniki.png"), bbox_inches="tight")
-plt.show()
 print("✅ Zapisano: m05_wspolczynniki.png")
 
 # ── 12. MODEL ARIMA ──────────────────────────────────────────
@@ -635,7 +634,6 @@ axes[2].xaxis.set_major_locator(mticker.MultipleLocator(4))
 
 plt.tight_layout()
 plt.savefig(os.path.join(SCRIPT_DIR, "m06_diagnostyka_iter2.png"), bbox_inches="tight")
-plt.show()
 print("✅ Zapisano: m06_diagnostyka_iter2.png")
 
 # ── M2-F. INTERPRETACJA ─────────────────────────────────────
