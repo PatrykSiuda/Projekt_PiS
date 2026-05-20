@@ -11,11 +11,23 @@
 
 import os
 import sys
-sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+# True when run as: py script.py  |  False when run via reticulate::source_python()
+_terminal = len(sys.argv) > 0 and sys.argv[0].endswith(".py")
+
+if _terminal:
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 import numpy as np
 import pandas as pd
 import matplotlib
-matplotlib.use("Agg")
+
+if _terminal:
+    matplotlib.use("Agg")  # no popup windows, plots saved to files only
+
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import seaborn as sns
@@ -39,7 +51,7 @@ try:
     PMDARIMA_AVAILABLE = True
 except ImportError:
     PMDARIMA_AVAILABLE = False
-    print("⚠️  Pakiet pmdarima niedostępny. Sekcja ARIMA zostanie pominięta.")
+    print("UWAGA: Pakiet pmdarima niedostepny. Sekcja ARIMA zostanie pominieta.")
     print("   Zainstaluj: pip install pmdarima")
 
 # ── ŚCIEŻKA DO DANYCH ────────────────────────────────────────
@@ -120,8 +132,10 @@ for ax, (title, (col, color)) in zip(axes.flat, variables.items()):
     ax.xaxis.set_major_locator(mticker.MultipleLocator(4))
 
 plt.tight_layout()
-plt.savefig(os.path.join(SCRIPT_DIR, "01_szeregi_czasowe.png"), bbox_inches="tight")
-print("✅ Zapisano: 01_szeregi_czasowe.png")
+plt.savefig(os.path.join(SCRIPT_DIR, "ep01_szeregi_czasowe.png"), bbox_inches="tight")
+plt.show()
+plt.close()
+print("Zapisano: ep01_szeregi_czasowe.png")
 
 # ── 4. MACIERZ KORELACJI ────────────────────────────────────
 corr_cols = [
@@ -145,8 +159,10 @@ labels = [
 ax.set_xticklabels(labels, rotation=30, ha="right")
 ax.set_yticklabels(labels, rotation=0)
 plt.tight_layout()
-plt.savefig(os.path.join(SCRIPT_DIR, "02_korelacja.png"), bbox_inches="tight")
-print("✅ Zapisano: 02_korelacja.png")
+plt.savefig(os.path.join(SCRIPT_DIR, "ep02_korelacja.png"), bbox_inches="tight")
+plt.show()
+plt.close()
+print("Zapisano: ep02_korelacja.png")
 
 # ── 5. WYKRESY ROZRZUTU ──────────────────────────────────────
 fig, axes = plt.subplots(2, 3, figsize=(16, 10))
@@ -177,8 +193,10 @@ for ax, (col, xlabel, color) in zip(axes.flat, scatter_vars):
     ax.set_title(f"r = {r:.3f}  (p = {pval:.3f})", fontsize=10)
 
 plt.tight_layout()
-plt.savefig(os.path.join(SCRIPT_DIR, "03_scatter.png"), bbox_inches="tight")
-print("✅ Zapisano: 03_scatter.png")
+plt.savefig(os.path.join(SCRIPT_DIR, "ep03_scatter.png"), bbox_inches="tight")
+plt.show()
+plt.close()
+print("Zapisano: ep03_scatter.png")
 
 # ── 6. BUDOWA MODELU OLS ─────────────────────────────────────
 #
@@ -201,28 +219,18 @@ model = sm.OLS(y, X).fit()
 print("\n" + "=" * 60)
 print("MODEL 1 – LOG-LINIOWY OLS (wyniki estymacji)")
 print("=" * 60)
-print("""
-  SPECYFIKACJA:
-    ln(ZUZYCIE) = β₀ + β₁·ln(PKB_pc) + β₂·ln(CENA)
-                + β₃·URBANIZACJA + β₄·HDD + β₅·CDD + ε
-
-  ZMIENNE OBJAŚNIAJĄCE:
-    ln(PKB_pc)   – elastyczność dochodowa popytu na energię
-                   (1% wzrostu PKB per capita → β₁% zmiany zużycia)
-    ln(CENA)     – elastyczność cenowa popytu
-                   (1% wzrostu ceny → β₂% zmiany zużycia, oczekiwany znak ujemny)
-    URBANIZACJA  – odsetek ludności miejskiej [%]; wyższe zurbanizowanie
-                   wiąże się z efektywniejszym zużyciem energii w gospodarstwach
-    HDD          – Heating Degree Days; miara zapotrzebowania na ogrzewanie
-    CDD          – Cooling Degree Days; miara zapotrzebowania na chłodzenie
-
-  FORMA FUNKCYJNA: log-liniowa → współczynniki przy ln(·) to elastyczności;
-  współczynniki przy zmiennych w poziomie (URBANIZACJA, HDD, CDD) to efekty semilogarytmiczne.
-
-  UWAGA: wykryto wysoką współliniowość (VIF>35 dla ln_pkb_pc i urbanizacji).
-         Estymacja punktowa może być niestabilna → patrz Iteracja 2.
-""")
+print("  SPECYFIKACJA:")
+print("    ln(ZUZYCIE) = b0 + b1*ln(PKB_pc) + b2*ln(CENA)")
+print("                + b3*URBANIZACJA + b4*HDD + b5*CDD + e")
+print("  ZMIENNE OBJASNIAJACE:")
+print("    ln(PKB_pc)   - elastycznosc dochodowa popytu na energie")
+print("    ln(CENA)     - elastycznosc cenowa popytu (oczekiwany znak ujemny)")
+print("    URBANIZACJA  - odsetek ludnosci miejskiej [%]")
+print("    HDD          - Heating Degree Days; miara zapotrzebowania na ogrzewanie")
+print("    CDD          - Cooling Degree Days; miara zapotrzebowania na chlodzenie")
+print("  UWAGA: wykryto wysoka wspolliniowosc (VIF>35). Patrz Iteracja 2.")
 print(model.summary())
+sys.stdout.flush()
 
 # ── 6b. MODEL Z OPÓŹNIONĄ ZMIENNĄ ZALEŻNĄ ───────────────────
 df["ln_zuzycie_lag1"] = df["ln_zuzycie"].shift(1)
@@ -236,21 +244,13 @@ model_lagged  = sm.OLS(y_lagged, X_lagged).fit()
 print("\n" + "=" * 60)
 print("MODEL 1b – DYNAMICZNY OLS (opóźniona zmienna zależna)")
 print("=" * 60)
-print("""
-  SPECYFIKACJA:
-    ln(ZUZYCIE_t) = β₀ + β₁·PKB_pc_t + β₂·ln(CENA_t) + β₃·URBANIZACJA_t
-                  + β₄·HDD_t + β₅·CDD_t + β₆·ln(ZUZYCIE_{t-1}) + ε_t
-
-  CEL: uchwycenie inercji systemu energetycznego – zużycie w roku t zależy
-  częściowo od zużycia w roku t-1 (kontrakty, infrastruktura, przyzwyczajenia).
-
-  WŁAŚCIWOŚCI:
-    • Opóźniona zmienna zależna (ln_zuzycie_lag1) absorbuje autokorelację reszt
-    • Kosztem: utrata 1 obserwacji (n = 20 zamiast 21)
-    • Współczynnik β₆ interpretowany jako szybkość dostosowania:
-      β₆ ≈ 1 → silna inercja, β₆ ≈ 0 → szybkie dostosowanie
-""")
+print("  SPECYFIKACJA:")
+print("    ln(ZUZYCIE_t) = b0 + b1*PKB_pc_t + b2*ln(CENA_t) + b3*URBANIZACJA_t")
+print("                  + b4*HDD_t + b5*CDD_t + b6*ln(ZUZYCIE_{t-1}) + e")
+print("  CEL: uchwycenie inercji systemu energetycznego.")
+print("  Wspolczynnik b6 ~ szybkosc dostosowania (b6~1 -> silna inercja).")
 print(model_lagged.summary())
+sys.stdout.flush()
 
 # ── 7. WERYFIKACJA NUMERYCZNA ────────────────────────────────
 print("\n" + "=" * 60)
@@ -299,9 +299,9 @@ stat_sw, p_sw = shapiro(residuals)
 stat_jb, p_jb, _, _ = jarque_bera(residuals)
 print(f"\n  [Normalność reszt]")
 print(f"  Shapiro-Wilk:    W = {stat_sw:.4f},  p = {p_sw:.4f}  "
-      f"{'✅ brak podstaw do odrzucenia H0' if p_sw > 0.05 else '❌ odrzucamy H0'}")
+      f"{'OK - brak podstaw do odrzucenia H0' if p_sw > 0.05 else 'BLAD - odrzucamy H0'}")
 print(f"  Jarque-Bera:     JB = {stat_jb:.4f}, p = {p_jb:.4f}  "
-      f"{'✅ brak podstaw do odrzucenia H0' if p_jb > 0.05 else '❌ odrzucamy H0'}")
+      f"{'OK - brak podstaw do odrzucenia H0' if p_jb > 0.05 else 'BLAD - odrzucamy H0'}")
 
 # 8b. Autokorelacja
 dw = durbin_watson(residuals)
@@ -310,20 +310,20 @@ print(f"\n  [Autokorelacja reszt]")
 print(f"  Durbin-Watson:   DW = {dw:.4f}  "
       f"({'brak autokorelacji' if 1.5 < dw < 2.5 else 'możliwa autokorelacja'})")
 print(f"  Breusch-Godfrey: LM = {bg_stat:.4f}, p = {bg_pval:.4f}  "
-      f"{'✅ brak autokorelacji' if bg_pval > 0.05 else '❌ autokorelacja wykryta'}")
+      f"{'OK - brak autokorelacji' if bg_pval > 0.05 else 'BLAD - autokorelacja wykryta'}")
 
 # 8c. Heteroskedastyczność
 bp_lm, bp_pval, _, _ = het_breuschpagan(residuals, X)
 print(f"\n  [Heteroskedastyczność]")
 print(f"  Breusch-Pagan:   LM = {bp_lm:.4f}, p = {bp_pval:.4f}  "
-      f"{'✅ homoskedastyczność' if bp_pval > 0.05 else '❌ heteroskedastyczność'}")
+      f"{'OK - homoskedastycznosc' if bp_pval > 0.05 else 'BLAD - heteroskedastycznosc'}")
 
 try:
     wh_lm, wh_pval, _, _ = het_white(residuals, X)
     print(f"  White:           LM = {wh_lm:.4f}, p = {wh_pval:.4f}  "
-          f"{'✅ homoskedastyczność' if wh_pval > 0.05 else '❌ heteroskedastyczność'}")
+          f"{'OK - homoskedastycznosc' if wh_pval > 0.05 else 'BLAD - heteroskedastycznosc'}")
 except Exception:
-    print("  White: test niedostępny (za mało stopni swobody)")
+    print("  White: test niedostepny (za malo stopni swobody)")
 
 # ── 9. WYKRESY DIAGNOSTYCZNE ─────────────────────────────────
 fig, axes = plt.subplots(2, 3, figsize=(16, 10))
@@ -395,8 +395,10 @@ ax.legend()
 ax.xaxis.set_major_locator(mticker.MultipleLocator(4))
 
 plt.tight_layout()
-plt.savefig(os.path.join(SCRIPT_DIR, "04_diagnostyka.png"), bbox_inches="tight")
-print("✅ Zapisano: 04_diagnostyka.png")
+plt.savefig(os.path.join(SCRIPT_DIR, "ep04_diagnostyka.png"), bbox_inches="tight")
+plt.show()
+plt.close()
+print("Zapisano: ep04_diagnostyka.png")
 
 # ── 10. INTERPRETACJA ANALITYCZNA ───────────────────────────
 print("\n" + "=" * 60)
@@ -404,29 +406,18 @@ print("INTERPRETACJA ANALITYCZNA MODELU LOG-LINIOWEGO")
 print("=" * 60)
 params = model.params
 
-print(f"""
-  Model postaci: ln(ZUZYCIE) = β₀ + β₁·ln(PKB_pc) + β₂·ln(CENA)
-                              + β₃·URBANIZACJA + β₄·HDD + β₅·CDD + ε
-
-  β₀ (stała)      = {params['const']:+.4f}
-  β₁ (ln_pkb_pc)  = {params['ln_pkb_pc']:+.4f}
-    → Elastyczność dochodowa: wzrost PKB per capita o 1%
-      zmienia zużycie energii o {params['ln_pkb_pc']:+.2f}%
-
-  β₂ (ln_cena)    = {params['ln_cena']:+.4f}
-    → Elastyczność cenowa: wzrost ceny o 1%
-      zmienia zużycie energii o {params['ln_cena']:+.2f}%
-
-  β₃ (urbanizacja)= {params['urbanizacja_pct']:+.4f}
-    → Wzrost urbanizacji o 1 pp zmienia ln(zużycie) o {params['urbanizacja_pct']:+.4f}
-      (tj. zmiana o ok. {np.expm1(params['urbanizacja_pct'])*100:+.2f}%)
-
-  β₄ (HDD)        = {params['hdd']:+.6f}
-    → Wzrost HDD o 1 dzień·stopień → zmiana zużycia o {params['hdd']:+.6f} (ln)
-
-  β₅ (CDD)        = {params['cdd']:+.6f}
-    → Wzrost CDD o 1 dzień·stopień → zmiana zużycia o {params['cdd']:+.6f} (ln)
-""")
+print("  Model: ln(ZUZYCIE) = b0 + b1*ln(PKB_pc) + b2*ln(CENA) + b3*URBANIZACJA + b4*HDD + b5*CDD")
+print(f"  b0 (stala)       = {params['const']:+.4f}")
+print(f"  b1 (ln_pkb_pc)   = {params['ln_pkb_pc']:+.4f}")
+print(f"    -> Elastycznosc dochodowa: wzrost PKB pc o 1% => zuzycie o {params['ln_pkb_pc']:+.2f}%")
+print(f"  b2 (ln_cena)     = {params['ln_cena']:+.4f}")
+print(f"    -> Elastycznosc cenowa: wzrost ceny o 1% => zuzycie o {params['ln_cena']:+.2f}%")
+print(f"  b3 (urbanizacja) = {params['urbanizacja_pct']:+.4f}")
+print(f"    -> Wzrost urbanizacji o 1pp => zmiana ln(zuzycie) o {params['urbanizacja_pct']:+.4f}")
+print(f"       (zmiana o ok. {np.expm1(params['urbanizacja_pct'])*100:+.2f}%)")
+print(f"  b4 (HDD)         = {params['hdd']:+.6f}")
+print(f"  b5 (CDD)         = {params['cdd']:+.6f}")
+sys.stdout.flush()
 
 # ── 11. PROGNOZA WARUNKOWA 2025–2030 ─────────────────────────
 #
@@ -532,8 +523,10 @@ ax.legend(fontsize=10, framealpha=0.9)
 ax.set_xlim(2003, 2031)
 
 plt.tight_layout()
-plt.savefig(os.path.join(SCRIPT_DIR, "05_prognoza_warunkowa.png"), bbox_inches="tight")
-print("✅ Zapisano: 05_prognoza_warunkowa.png")
+plt.savefig(os.path.join(SCRIPT_DIR, "ep05_prognoza_warunkowa.png"), bbox_inches="tight")
+plt.show()
+plt.close()
+print("Zapisano: ep05_prognoza_warunkowa.png")
 
 # ── 13. TABELA PORÓWNAWCZA SCENARIUSZY ───────────────────────
 fig, ax = plt.subplots(figsize=(14, 5))
@@ -573,8 +566,10 @@ for i in range(1, len(table_data)):
 ax.set_title("Zestawienie prognoz warunkowych 2025–2030 vs bazowy rok 2024",
              fontsize=12, fontweight="bold", pad=10)
 plt.tight_layout()
-plt.savefig(os.path.join(SCRIPT_DIR, "06_tabela_prognoz.png"), bbox_inches="tight")
-print("✅ Zapisano: 06_tabela_prognoz.png")
+plt.savefig(os.path.join(SCRIPT_DIR, "ep06_tabela_prognoz.png"), bbox_inches="tight")
+plt.show()
+plt.close()
+print("Zapisano: ep06_tabela_prognoz.png")
 
 # ── 14. WYKRES WSPÓŁCZYNNIKÓW ────────────────────────────────
 fig, ax = plt.subplots(figsize=(10, 6))
@@ -608,8 +603,10 @@ for bar, val in zip(bars, coefs.values):
             ha="left" if val > 0 else "right", fontsize=9)
 
 plt.tight_layout()
-plt.savefig(os.path.join(SCRIPT_DIR, "07_wspolczynniki.png"), bbox_inches="tight")
-print("✅ Zapisano: 07_wspolczynniki.png")
+plt.savefig(os.path.join(SCRIPT_DIR, "ep07_wspolczynniki.png"), bbox_inches="tight")
+plt.show()
+plt.close()
+print("Zapisano: ep07_wspolczynniki.png")
 
 # ── 15. MODEL ARIMA ──────────────────────────────────────────
 if PMDARIMA_AVAILABLE:
@@ -639,43 +636,25 @@ if PMDARIMA_AVAILABLE:
 print("\n" + "=" * 60)
 print("PODSUMOWANIE PROJEKTU")
 print("=" * 60)
-print(f"""
-  Zmienna zależna : Zużycie energii elektrycznej w Polsce [GWh]
-  Okres próby     : 2004–2024  (n = {n} obserwacji rocznych)
-  Model           : log-liniowy OLS (5 zmiennych objaśniających)
-
-  MIARY DOPASOWANIA:
-    R²      = {R2:.4f}  → model wyjaśnia {R2*100:.1f}% zmienności
-    R² adj  = {R2_adj:.4f}
-    AIC     = {AIC:.2f}
-    BIC     = {BIC:.2f}
-    F-test  = {F_stat:.2f}  (p = {F_pval:.6f}) → model istotny łącznie
-
-  WERYFIKACJA STOCHASTYCZNA:
-    Normalność reszt    : Shapiro-Wilk p = {p_sw:.4f}
-    Autokorelacja       : DW = {dw:.4f}, BG p = {bg_pval:.4f}
-    Heteroskedastyczność: BP p = {bp_pval:.4f}
-
-  WNIOSKI EKONOMICZNE:
-    • Elastyczność dochodowa  = {params['ln_pkb_pc']:+.3f}
-      → Wzrost zamożności społeczeństwa zwiększa zapotrzebowanie na energię
-    • Elastyczność cenowa     = {params['ln_cena']:+.3f}
-      → Wyższe ceny nieznacznie ograniczają zużycie (niska elastyczność)
-    • Urbanizacja i klimat mają istotny wpływ strukturalny
-
-  PROGNOZA 2030 (scenariusz bazowy):
-    ≈ {forecast_results['Bazowy']['mean'][-1]:,.0f} GWh
-    (vs {base_2024:,} GWh w 2024)
-
-  Wygenerowane pliki:
-    01_szeregi_czasowe.png
-    02_korelacja.png
-    03_scatter.png
-    04_diagnostyka.png
-    05_prognoza_warunkowa.png
-    06_tabela_prognoz.png
-    07_wspolczynniki.png
-""")
+print(f"  Zmienna zalezna : Zuzycie energii elektrycznej w Polsce [GWh]")
+print(f"  Okres proby     : 2004-2024  (n = {n} obserwacji rocznych)")
+print(f"  Model           : log-liniowy OLS (5 zmiennych objasniajacych)")
+print(f"  MIARY DOPASOWANIA:")
+print(f"    R2      = {R2:.4f}  -> model wyjasnia {R2*100:.1f}% zmiennosci")
+print(f"    R2 adj  = {R2_adj:.4f}")
+print(f"    AIC     = {AIC:.2f}")
+print(f"    BIC     = {BIC:.2f}")
+print(f"    F-test  = {F_stat:.2f}  (p = {F_pval:.6f})")
+print(f"  WERYFIKACJA STOCHASTYCZNA:")
+print(f"    Normalnosc reszt (SW) : p = {p_sw:.4f}")
+print(f"    Autokorelacja (DW/BG) : DW = {dw:.4f},  BG p = {bg_pval:.4f}")
+print(f"    Heteroskedastycznosc  : BP p = {bp_pval:.4f}")
+print(f"  Elastycznosc dochodowa  = {params['ln_pkb_pc']:+.3f}")
+print(f"  Elastycznosc cenowa     = {params['ln_cena']:+.3f}")
+print(f"  Prognoza bazowa 2030    = {forecast_results['Bazowy']['mean'][-1]:,.0f} GWh")
+print(f"  (vs {base_2024:,} GWh w 2024)")
+print("  Wygenerowane pliki: ep01..ep08_*.png")
+sys.stdout.flush()
 
 # ============================================================
 # ITERACJA 2 – KOREKTA WIELOKOLINIOWOŚCI
@@ -689,26 +668,12 @@ print(f"""
 print("\n" + "=" * 60)
 print("ITERACJA 2 – MODEL 2 (korekta wielokoliniowości)")
 print("=" * 60)
-print("""
-  MOTYWACJA:
-    W Modelu 1 wykryto silną wielokoliniowość:
-      VIF(ln_pkb_pc) ≈ 46,  VIF(urbanizacja_pct) ≈ 35
-      corr(ln_pkb_pc, urbanizacja_pct) = –0.985
-    Urbanizacja i PKB per capita mierzą ten sam trend rozwojowy → jedna z nich
-    jest redundantna. Usunięto urbanizacja_pct jako zmienną bardziej pośrednią.
-
-  SPECYFIKACJA:
-    ln(ZUZYCIE) = β₀ + β₁·ln(PKB_pc) + β₂·ln(CENA) + β₃·HDD + β₄·CDD + ε
-
-  OCZEKIWANE POPRAWY:
-    • VIF poniżej 15 dla wszystkich zmiennych
-    • Stabilniejsze estymaty i szersze, bardziej wiarygodne przedziały ufności
-
-  OCENA DO PROGNOZOWANIA:
-    Brak autokorelacji (BG p>0.05), brak heteroskedastyczności → prognozy warunkowe
-    są dopuszczalne. Ograniczenie: reszty nienormalne (SW p<0.05) → przedziały
-    predykcji należy traktować orientacyjnie.
-""")
+print("  MOTYWACJA:")
+print("    VIF(ln_pkb_pc)~46, VIF(urbanizacja_pct)~35, corr=-0.985 -> wielokoliniowosc")
+print("    Usunieto urbanizacja_pct jako zmienna bardziej posrednia.")
+print("  SPECYFIKACJA:")
+print("    ln(ZUZYCIE) = b0 + b1*ln(PKB_pc) + b2*ln(CENA) + b3*HDD + b4*CDD + e")
+print("  OCZEKIWANE POPRAWY: VIF < 15, stabilniejsze estymaty.")
 
 # ── M2-A. ESTYMACJA ─────────────────────────────────────────
 #   ln(ZUZYCIE) = β₀ + β₁·ln(PKB_PC) + β₂·ln(CENA) + β₃·HDD + β₄·CDD + ε
@@ -760,13 +725,13 @@ bp2_lm, bp2_p, _, _   = het_breuschpagan(res2, X2)
 
 print(f"\n  Weryfikacja stochastyczna – Model 2:")
 print(f"  Shapiro-Wilk  p = {sw2_p:.4f}  "
-      f"{'✅' if sw2_p > 0.05 else '❌'}")
+      f"{'OK' if sw2_p > 0.05 else 'BLAD - nienormalne reszty'}")
 print(f"  Durbin-Watson   = {dw2:.4f}  "
-      f"{'✅' if 1.5 < dw2 < 2.5 else '⚠️ możliwa autokorelacja'}")
+      f"{'OK' if 1.5 < dw2 < 2.5 else 'UWAGA - mozliwa autokorelacja'}")
 print(f"  Breusch-Godfrey p = {bg2_p:.4f}  "
-      f"{'✅' if bg2_p > 0.05 else '❌ autokorelacja'}")
+      f"{'OK' if bg2_p > 0.05 else 'BLAD - autokorelacja'}")
 print(f"  Breusch-Pagan   p = {bp2_p:.4f}  "
-      f"{'✅' if bp2_p > 0.05 else '❌ heteroskedastyczność'}")
+      f"{'OK' if bp2_p > 0.05 else 'BLAD - heteroskedastycznosc'}")
 
 # ── M2-E. WYKRES DIAGNOSTYCZNY ──────────────────────────────
 fig, axes = plt.subplots(1, 3, figsize=(15, 4))
@@ -791,8 +756,10 @@ axes[2].set_xlabel("Rok")
 axes[2].xaxis.set_major_locator(mticker.MultipleLocator(4))
 
 plt.tight_layout()
-plt.savefig(os.path.join(SCRIPT_DIR, "08_diagnostyka_iter2.png"), bbox_inches="tight")
-print("✅ Zapisano: 08_diagnostyka_iter2.png")
+plt.savefig(os.path.join(SCRIPT_DIR, "ep08_diagnostyka_iter2.png"), bbox_inches="tight")
+plt.show()
+plt.close()
+print("Zapisano: ep08_diagnostyka_iter2.png")
 
 # ── M2-F. INTERPRETACJA ─────────────────────────────────────
 p2 = model2.params
