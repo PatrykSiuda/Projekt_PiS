@@ -12,11 +12,22 @@
 
 import os
 import sys
-sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+_terminal = len(sys.argv) > 0 and sys.argv[0].endswith(".py")
+
+if _terminal:
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 import numpy as np
 import pandas as pd
 import matplotlib
-matplotlib.use("Agg")
+
+if _terminal:
+    matplotlib.use("Agg")
+
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import seaborn as sns
@@ -40,7 +51,7 @@ try:
     PMDARIMA_AVAILABLE = True
 except ImportError:
     PMDARIMA_AVAILABLE = False
-    print("⚠️  Pakiet pmdarima niedostępny. Sekcja ARIMA zostanie pominięta.")
+    print("UWAGA: Pakiet pmdarima niedostepny. Sekcja ARIMA zostanie pominieta.")
     print("   Zainstaluj: pip install pmdarima")
 
 # ── ŚCIEŻKA DO DANYCH ────────────────────────────────────────
@@ -119,8 +130,10 @@ for ax, (title, (col, color)) in zip(axes.flat, variables.items()):
     )
 
 plt.tight_layout()
-plt.savefig(os.path.join(SCRIPT_DIR, "m01_szeregi_czasowe.png"), bbox_inches="tight")
-print("✅ Zapisano: m01_szeregi_czasowe.png")
+plt.savefig(os.path.join(SCRIPT_DIR, "mp01_szeregi_czasowe.png"), bbox_inches="tight")
+plt.show()
+plt.close()
+print("Zapisano: mp01_szeregi_czasowe.png")
 
 # ── 4. MACIERZ KORELACJI ────────────────────────────────────
 corr_cols   = ["MO", "NAKL", "WYNAGR", "WSK25-34", "WSK_URB", "SM"]
@@ -138,8 +151,10 @@ labels = ["Mieszkania oddane", "Nakłady", "Wynagrodzenie",
 ax.set_xticklabels(labels, rotation=30, ha="right")
 ax.set_yticklabels(labels, rotation=0)
 plt.tight_layout()
-plt.savefig(os.path.join(SCRIPT_DIR, "m02_korelacja.png"), bbox_inches="tight")
-print("✅ Zapisano: m02_korelacja.png")
+plt.savefig(os.path.join(SCRIPT_DIR, "mp02_korelacja.png"), bbox_inches="tight")
+plt.show()
+plt.close()
+print("Zapisano: mp02_korelacja.png")
 
 # ── 5. WYKRESY ROZRZUTU ──────────────────────────────────────
 fig, axes = plt.subplots(2, 3, figsize=(16, 10))
@@ -171,8 +186,10 @@ for ax, (col, xlabel, color) in zip(axes.flat, scatter_vars):
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{x:,.0f}"))
 
 plt.tight_layout()
-plt.savefig(os.path.join(SCRIPT_DIR, "m03_scatter.png"), bbox_inches="tight")
-print("✅ Zapisano: m03_scatter.png")
+plt.savefig(os.path.join(SCRIPT_DIR, "mp03_scatter.png"), bbox_inches="tight")
+plt.show()
+plt.close()
+print("Zapisano: mp03_scatter.png")
 
 # ── 6. BUDOWA MODELU OLS ─────────────────────────────────────
 #
@@ -196,30 +213,18 @@ model = sm.OLS(y, X).fit()
 print("\n" + "=" * 60)
 print("MODEL 1 – LINIOWY OLS (wyniki estymacji)")
 print("=" * 60)
-print("""
-  SPECYFIKACJA:
-    MO = β₀ + β₁·NAKL + β₂·WYNAGR + β₃·WSK25-34 + β₄·WSK_URB + β₅·SM + ε
-
-  ZMIENNA ZALEŻNA:
-    MO – mieszkania oddane do użytkowania [szt./rok]
-
-  ZMIENNE OBJAŚNIAJĄCE:
-    NAKL      – nakłady na budownictwo mieszkaniowe [mln zł]; czynnik podażowy;
-                wzrost inwestycji → więcej ukończonych mieszkań
-    WYNAGR    – przeciętne wynagrodzenie brutto [zł]; siła nabywcza gospodarstw
-                domowych → wzrost zamożności → wyższy popyt
-    WSK25-34  – udział osób w wieku 25–34 lat w populacji; główna grupa
-                nabywców i najemców mieszkań; czynnik demograficzny
-    WSK_URB   – wskaźnik urbanizacji; koncentracja popytu w miastach
-    SM        – saldo migracji [‰]; napływ ludności zwiększa popyt na mieszkania
-
-  FORMA FUNKCYJNA: liniowa (bez logarytmów) → współczynniki β to efekty
-  marginalne w jednostkach oryginalnych.
-
-  UWAGA: wykryto wysoką współliniowość (VIF>23 dla NAKL i WYNAGR).
-         Estymacja punktowa może być niestabilna → patrz Iteracja 2.
-""")
+print("  SPECYFIKACJA:")
+print("    MO = b0 + b1*NAKL + b2*WYNAGR + b3*WSK25-34 + b4*WSK_URB + b5*SM + e")
+print("  ZMIENNA ZALEZNA: MO - mieszkania oddane do uzytkowania [szt./rok]")
+print("  ZMIENNE OBJASNIAJACE:")
+print("    NAKL     - naklady na budownictwo [mln zl]; czynnik podazowy")
+print("    WYNAGR   - wynagrodzenie brutto [zl]; sila nabywcza")
+print("    WSK25-34 - udzial osob 25-34 lat; czynnik demograficzny")
+print("    WSK_URB  - urbanizacja; koncentracja popytu w miastach")
+print("    SM       - saldo migracji [promil]")
+print("  UWAGA: wysoka wspolliniowosc VIF>23 (NAKL/WYNAGR). Patrz Iteracja 2.")
 print(model.summary())
+sys.stdout.flush()
 
 # ── 6b. MODEL Z OPÓŹNIONĄ ZMIENNĄ ZALEŻNĄ ───────────────────
 X_cols_lagged = ["NAKL", "WYNAGR", "WSK25-34", "WSK_URB", "SM", "MO_lag1"]
@@ -230,21 +235,13 @@ model_lagged  = sm.OLS(y_lagged, X_lagged).fit()
 print("\n" + "=" * 60)
 print("MODEL 1b – DYNAMICZNY OLS (opóźniona zmienna zależna)")
 print("=" * 60)
-print("""
-  SPECYFIKACJA:
-    MO_t = β₀ + β₁·NAKL_t + β₂·WYNAGR_t + β₃·WSK25-34_t
-          + β₄·WSK_URB_t + β₅·SM_t + β₆·MO_{t-1} + ε_t
-
-  CEL: uchwycenie wieloletnich cykli budowlanych – liczba oddanych mieszkań
-  w roku t zależy częściowo od liczby w roku t-1 (projekty realizowane
-  przez kilka lat, opóźnienia decyzyjne i administracyjne).
-
-  WŁAŚCIWOŚCI:
-    • MO_lag1 absorbuje autokorelację reszt i poprawia DW
-    • Kosztem: utrata 1 obserwacji (n = 20 zamiast 21)
-    • Współczynnik β₆ to miara inercji rynku mieszkaniowego
-""")
+print("  SPECYFIKACJA:")
+print("    MO_t = b0 + b1*NAKL_t + b2*WYNAGR_t + b3*WSK25-34_t")
+print("         + b4*WSK_URB_t + b5*SM_t + b6*MO_{t-1} + e")
+print("  CEL: uchwycenie cykli budowlanych (projekty wieloletnie).")
+print("  Wspolczynnik b6 to miara inercji rynku mieszkaniowego.")
 print(model_lagged.summary())
+sys.stdout.flush()
 
 # ── 7. WERYFIKACJA NUMERYCZNA ────────────────────────────────
 print("\n" + "=" * 60)
@@ -293,9 +290,9 @@ stat_sw, p_sw = shapiro(residuals)
 stat_jb, p_jb, _, _ = jarque_bera(residuals)
 print(f"\n  [Normalność reszt]")
 print(f"  Shapiro-Wilk:    W = {stat_sw:.4f},  p = {p_sw:.4f}  "
-      f"{'✅ brak podstaw do odrzucenia H0' if p_sw > 0.05 else '❌ odrzucamy H0'}")
+      f"{'OK' if p_sw > 0.05 else 'BLAD - odrzucamy H0'}")
 print(f"  Jarque-Bera:     JB = {stat_jb:.4f}, p = {p_jb:.4f}  "
-      f"{'✅ brak podstaw do odrzucenia H0' if p_jb > 0.05 else '❌ odrzucamy H0'}")
+      f"{'OK' if p_jb > 0.05 else 'BLAD - odrzucamy H0'}")
 
 # 8b. Autokorelacja
 dw = durbin_watson(residuals)
@@ -304,20 +301,20 @@ print(f"\n  [Autokorelacja reszt]")
 print(f"  Durbin-Watson:   DW = {dw:.4f}  "
       f"({'brak autokorelacji' if 1.5 < dw < 2.5 else 'możliwa autokorelacja'})")
 print(f"  Breusch-Godfrey: LM = {bg_stat:.4f}, p = {bg_pval:.4f}  "
-      f"{'✅ brak autokorelacji' if bg_pval > 0.05 else '❌ autokorelacja wykryta'}")
+      f"{'OK - brak autokorelacji' if bg_pval > 0.05 else 'BLAD - autokorelacja wykryta'}")
 
-# 8c. Heteroskedastyczność
+# 8c. Heteroskedastycznosc
 bp_lm, bp_pval, _, _ = het_breuschpagan(residuals, X)
-print(f"\n  [Heteroskedastyczność]")
+print(f"\n  [Heteroskedastycznosc]")
 print(f"  Breusch-Pagan:   LM = {bp_lm:.4f}, p = {bp_pval:.4f}  "
-      f"{'✅ homoskedastyczność' if bp_pval > 0.05 else '❌ heteroskedastyczność'}")
+      f"{'OK - homoskedastycznosc' if bp_pval > 0.05 else 'BLAD - heteroskedastycznosc'}")
 
 try:
     wh_lm, wh_pval, _, _ = het_white(residuals, X)
     print(f"  White:           LM = {wh_lm:.4f}, p = {wh_pval:.4f}  "
-          f"{'✅ homoskedastyczność' if wh_pval > 0.05 else '❌ heteroskedastyczność'}")
+          f"{'OK - homoskedastycznosc' if wh_pval > 0.05 else 'BLAD - heteroskedastycznosc'}")
 except Exception:
-    print("  White: test niedostępny (za mało stopni swobody)")
+    print("  White: test niedostepny (za malo stopni swobody)")
 
 # ── 9. WYKRESY DIAGNOSTYCZNE ─────────────────────────────────
 fig, axes = plt.subplots(2, 3, figsize=(16, 10))
@@ -388,8 +385,10 @@ ax.legend()
 ax.xaxis.set_major_locator(mticker.MultipleLocator(4))
 
 plt.tight_layout()
-plt.savefig(os.path.join(SCRIPT_DIR, "m04_diagnostyka.png"), bbox_inches="tight")
-print("✅ Zapisano: m04_diagnostyka.png")
+plt.savefig(os.path.join(SCRIPT_DIR, "mp04_diagnostyka.png"), bbox_inches="tight")
+plt.show()
+plt.close()
+print("Zapisano: mp04_diagnostyka.png")
 
 # ── 10. INTERPRETACJA ANALITYCZNA ───────────────────────────
 print("\n" + "=" * 60)
@@ -397,26 +396,19 @@ print("INTERPRETACJA ANALITYCZNA MODELU LINIOWEGO")
 print("=" * 60)
 params = model.params
 
-print(f"""
-  Model postaci: MO = β₀ + β₁·NAKL + β₂·WYNAGR
-                    + β₃·WSK25-34 + β₄·WSK_URB + β₅·SM + ε
-
-  β₀ (stała)       = {params['const']:+.2f}
-  β₁ (NAKL)        = {params['NAKL']:+.4f}
-    → Wzrost nakładów o 1 mln zł zmienia liczbę mieszkań o {params['NAKL']:+.2f} szt.
-
-  β₂ (WYNAGR)      = {params['WYNAGR']:+.4f}
-    → Wzrost wynagrodzenia o 1 zł zmienia liczbę mieszkań o {params['WYNAGR']:+.2f} szt.
-
-  β₃ (WSK25-34)    = {params['WSK25-34']:+.4f}
-    → Wzrost udziału osób 25–34 o 0.001 zmienia liczbę mieszkań o {params['WSK25-34'] * 0.001:+.2f} szt.
-
-  β₄ (WSK_URB)     = {params['WSK_URB']:+.4f}
-    → Wzrost urbanizacji o 0.001 zmienia liczbę mieszkań o {params['WSK_URB'] * 0.001:+.2f} szt.
-
-  β₅ (SM)          = {params['SM']:+.4f}
-    → Wzrost salda migracji o 1‰ zmienia liczbę mieszkań o {params['SM']:+.2f} szt.
-""")
+print("  Model: MO = b0 + b1*NAKL + b2*WYNAGR + b3*WSK25-34 + b4*WSK_URB + b5*SM")
+print(f"  b0 (stala)       = {params['const']:+.2f}")
+print(f"  b1 (NAKL)        = {params['NAKL']:+.4f}")
+print(f"    -> Wzrost nakladow o 1 mln zl => {params['NAKL']:+.2f} szt. mieszkan")
+print(f"  b2 (WYNAGR)      = {params['WYNAGR']:+.4f}")
+print(f"    -> Wzrost wynagrodzenia o 1 zl => {params['WYNAGR']:+.2f} szt.")
+print(f"  b3 (WSK25-34)    = {params['WSK25-34']:+.4f}")
+print(f"    -> Wzrost udzialu 25-34 o 0.001 => {params['WSK25-34']*0.001:+.2f} szt.")
+print(f"  b4 (WSK_URB)     = {params['WSK_URB']:+.4f}")
+print(f"    -> Wzrost urbanizacji o 0.001 => {params['WSK_URB']*0.001:+.2f} szt.")
+print(f"  b5 (SM)          = {params['SM']:+.4f}")
+print(f"    -> Wzrost salda migracji o 1 promil => {params['SM']:+.2f} szt.")
+sys.stdout.flush()
 
 # ── 11. WYKRES WSPÓŁCZYNNIKÓW ────────────────────────────────
 fig, ax = plt.subplots(figsize=(10, 6))
@@ -450,8 +442,10 @@ for bar, val in zip(bars, coefs.values):
             ha="left" if val > 0 else "right", fontsize=9)
 
 plt.tight_layout()
-plt.savefig(os.path.join(SCRIPT_DIR, "m05_wspolczynniki.png"), bbox_inches="tight")
-print("✅ Zapisano: m05_wspolczynniki.png")
+plt.savefig(os.path.join(SCRIPT_DIR, "mp05_wspolczynniki.png"), bbox_inches="tight")
+plt.show()
+plt.close()
+print("Zapisano: mp05_wspolczynniki.png")
 
 # ── 12. MODEL ARIMA ──────────────────────────────────────────
 if PMDARIMA_AVAILABLE:
@@ -479,38 +473,24 @@ if PMDARIMA_AVAILABLE:
 print("\n" + "=" * 60)
 print("PODSUMOWANIE PROJEKTU")
 print("=" * 60)
-print(f"""
-  Zmienna zależna : Liczba mieszkań oddanych do użytkowania w Polsce [szt.]
-  Okres próby     : 2004–2024  (n = {n} obserwacji rocznych)
-  Model           : liniowy OLS (5 zmiennych objaśniających)
-
-  MIARY DOPASOWANIA:
-    R²      = {R2:.4f}  → model wyjaśnia {R2*100:.1f}% zmienności
-    R² adj  = {R2_adj:.4f}
-    AIC     = {AIC:.2f}
-    BIC     = {BIC:.2f}
-    F-test  = {F_stat:.2f}  (p = {F_pval:.6f}) → model istotny łącznie
-
-  WERYFIKACJA STOCHASTYCZNA:
-    Normalność reszt    : Shapiro-Wilk p = {p_sw:.4f}
-    Autokorelacja       : DW = {dw:.4f}, BG p = {bg_pval:.4f}
-    Heteroskedastyczność: BP p = {bp_pval:.4f}
-
-  WNIOSKI EKONOMICZNE:
-    • Nakłady (NAKL)       β = {params['NAKL']:+.4f}
-      → Główny czynnik podażowy – inwestycje napędzają budownictwo
-    • Wynagrodzenia (WYNAGR) β = {params['WYNAGR']:+.4f}
-      → Wzrost zamożności zwiększa popyt na mieszkania
-    • Demografia (WSK25-34) β = {params['WSK25-34']:+.4f}
-      → Malejący udział grupy 25–34 lat wywiera presję na spadek popytu
-
-  Wygenerowane pliki:
-    m01_szeregi_czasowe.png
-    m02_korelacja.png
-    m03_scatter.png
-    m04_diagnostyka.png
-    m05_wspolczynniki.png
-""")
+print(f"  Zmienna zalezna : Mieszkania oddane w Polsce [szt./rok]")
+print(f"  Okres proby     : 2004-2024  (n = {n} obserwacji rocznych)")
+print(f"  Model           : liniowy OLS (5 zmiennych objasniajacych)")
+print(f"  MIARY DOPASOWANIA:")
+print(f"    R2      = {R2:.4f}  -> model wyjasnia {R2*100:.1f}% zmiennosci")
+print(f"    R2 adj  = {R2_adj:.4f}")
+print(f"    AIC     = {AIC:.2f}")
+print(f"    BIC     = {BIC:.2f}")
+print(f"    F-test  = {F_stat:.2f}  (p = {F_pval:.6f})")
+print(f"  WERYFIKACJA STOCHASTYCZNA:")
+print(f"    Normalnosc reszt (SW) : p = {p_sw:.4f}")
+print(f"    Autokorelacja (DW/BG) : DW = {dw:.4f},  BG p = {bg_pval:.4f}")
+print(f"    Heteroskedastycznosc  : BP p = {bp_pval:.4f}")
+print(f"  b1 (NAKL)     = {params['NAKL']:+.4f}")
+print(f"  b2 (WYNAGR)   = {params['WYNAGR']:+.4f}")
+print(f"  b3 (WSK25-34) = {params['WSK25-34']:+.4f}")
+print("  Wygenerowane pliki: mp01..mp06_*.png")
+sys.stdout.flush()
 
 # ============================================================
 # ITERACJA 2 – KOREKTA WIELOKOLINIOWOŚCI I AUTOKORELACJI
@@ -525,27 +505,13 @@ print(f"""
 print("\n" + "=" * 60)
 print("ITERACJA 2 – MODEL 2 (korekta wielokoliniowości + HAC)")
 print("=" * 60)
-print("""
-  MOTYWACJA:
-    W Modelu 1 wykryto dwa problemy:
-      1. Wielokoliniowość: VIF(WYNAGR)=27.7, VIF(NAKL)=23.6
-         corr(NAKL, WYNAGR) = 0.974 → oba odzwierciedlają wzrost gosp.
-         Usunięto WYNAGR jako zmienną bardziej pośrednią (efekt dochodowy
-         jest już częściowo zawarty w NAKL i poziomie aktywności budowlanej).
-      2. Autokorelacja reszt: DW ≈ 1.0, BG p < 0.05
-         Zastosowano błędy standardowe HAC (Newey-West, maxlags=2)
-         jako korektę wnioskowania statystycznego.
-
-  SPECYFIKACJA:
-    MO = β₀ + β₁·NAKL + β₂·WSK25-34 + β₃·WSK_URB + β₄·SM + ε
-    Błędy standardowe: HAC Newey-West (maxlags=2)
-
-  OCENA DO PROGNOZOWANIA:
-    Reszty normalne (SW p>0.05), brak heteroskedastyczności → OK.
-    Autokorelacja nadal obecna w resztach OLS (DW≈0.75) – HAC poprawia
-    wnioskowanie, ale nie strukturę błędów prognoz. Do prognozowania
-    zalecany wariant z MO_lag1 lub model ARIMA (sekcja 12).
-""")
+print("  MOTYWACJA:")
+print("    1. VIF(WYNAGR)=27.7, VIF(NAKL)=23.6, corr=0.974 -> wielokoliniowosc")
+print("       Usunieto WYNAGR jako zmienna bardziej posrednia.")
+print("    2. Autokorelacja reszt (DW~1.0) -> bledy standardowe HAC (Newey-West)")
+print("  SPECYFIKACJA:")
+print("    MO = b0 + b1*NAKL + b2*WSK25-34 + b3*WSK_URB + b4*SM + e")
+print("    Bledy standardowe: HAC Newey-West (maxlags=2)")
 
 # ── M2-A. ESTYMACJA ─────────────────────────────────────────
 #   MO = β₀ + β₁·NAKL + β₂·WSK25-34 + β₃·WSK_URB + β₄·SM + ε
@@ -599,15 +565,15 @@ bp2_lm, bp2_p, _, _   = het_breuschpagan(res2, X2)
 
 print(f"\n  Weryfikacja stochastyczna – Model 2 (OLS bez WYNAGR):")
 print(f"  Shapiro-Wilk  p = {sw2_p:.4f}  "
-      f"{'✅' if sw2_p > 0.05 else '❌'}")
+      f"{'OK' if sw2_p > 0.05 else 'BLAD - nienormalne reszty'}")
 print(f"  Durbin-Watson   = {dw2:.4f}  "
-      f"{'✅' if 1.5 < dw2 < 2.5 else '⚠️ autokorelacja → stosujemy HAC'}")
+      f"{'OK' if 1.5 < dw2 < 2.5 else 'UWAGA - autokorelacja -> stosujemy HAC'}")
 print(f"  Breusch-Godfrey p = {bg2_p:.4f}  "
-      f"{'✅' if bg2_p > 0.05 else '❌ autokorelacja → błędy HAC aktywne'}")
+      f"{'OK' if bg2_p > 0.05 else 'BLAD - autokorelacja -> bledy HAC aktywne'}")
 print(f"  Breusch-Pagan   p = {bp2_p:.4f}  "
-      f"{'✅' if bp2_p > 0.05 else '❌ heteroskedastyczność'}")
-print(f"\n  ℹ️  Błędy standardowe w Modelu 2 są korygowane metodą HAC")
-print(f"     (Newey-West, maxlags=2) – odporne na autokorelację i heteroskedastyczność.")
+      f"{'OK' if bp2_p > 0.05 else 'BLAD - heteroskedastycznosc'}")
+print(f"\n  INFO: Bledy standardowe w Modelu 2 korygowane metoda HAC")
+print(f"        (Newey-West, maxlags=2) - odporne na autokorelacje i heteroskedastycznosc.")
 
 # ── M2-E. WYKRES DIAGNOSTYCZNY ──────────────────────────────
 fig, axes = plt.subplots(1, 3, figsize=(15, 4))
@@ -633,8 +599,10 @@ axes[2].set_xlabel("Rok")
 axes[2].xaxis.set_major_locator(mticker.MultipleLocator(4))
 
 plt.tight_layout()
-plt.savefig(os.path.join(SCRIPT_DIR, "m06_diagnostyka_iter2.png"), bbox_inches="tight")
-print("✅ Zapisano: m06_diagnostyka_iter2.png")
+plt.savefig(os.path.join(SCRIPT_DIR, "mp06_diagnostyka_iter2.png"), bbox_inches="tight")
+plt.show()
+plt.close()
+print("Zapisano: mp06_diagnostyka_iter2.png")
 
 # ── M2-F. INTERPRETACJA ─────────────────────────────────────
 p2 = pd.Series(model2.params, index=model2.model.exog_names)
