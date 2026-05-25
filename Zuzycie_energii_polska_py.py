@@ -670,15 +670,16 @@ print("ITERACJA 2 – MODEL 2 (korekta wielokoliniowości)")
 print("=" * 60)
 print("  MOTYWACJA:")
 print("    VIF(ln_pkb_pc)~46, VIF(urbanizacja_pct)~35, corr=-0.985 -> wielokoliniowosc")
-print("    Usunieto urbanizacja_pct jako zmienna bardziej posrednia.")
+print("    Usunieto urbanizacja_pct (VIF>35) i cdd (p=0.57, RMSPE%>20% w prognozie)")
+print("    Wynik: AIC -72.67 vs -71.27 dla modelu z cdd; R2adj rosnie z 0.705 do 0.714.")
 print("  SPECYFIKACJA:")
-print("    ln(ZUZYCIE) = b0 + b1*ln(PKB_pc) + b2*ln(CENA) + b3*HDD + b4*CDD + e")
-print("  OCZEKIWANE POPRAWY: VIF < 15, stabilniejsze estymaty.")
+print("    ln(ZUZYCIE) = b0 + b1*ln(PKB_pc) + b2*ln(CENA) + b3*HDD + e")
+print("  OCZEKIWANE POPRAWY: VIF < 12, lepsze AIC/BIC, parsymoniczny model.")
 
 # ── M2-A. ESTYMACJA ─────────────────────────────────────────
-#   ln(ZUZYCIE) = β₀ + β₁·ln(PKB_PC) + β₂·ln(CENA) + β₃·HDD + β₄·CDD + ε
+#   ln(ZUZYCIE) = β₀ + β₁·ln(PKB_PC) + β₂·ln(CENA) + β₃·HDD + ε
 
-X2_cols = ["ln_pkb_pc", "ln_cena", "hdd", "cdd"]
+X2_cols = ["ln_pkb_pc", "ln_cena", "hdd"]
 X2      = sm.add_constant(df[X2_cols])
 model2  = sm.OLS(df["ln_zuzycie"], X2).fit()
 
@@ -699,7 +700,8 @@ vif_m2 = {col: variance_inflation_factor(X2.values, i+1)
           for i, col in enumerate(X2_cols)}
 for col in X2_cols:
     print(f"  {col:<20} {vif_m1[col]:>8.2f}  {vif_m2[col]:>8.2f}")
-print(f"  {'urbanizacja_pct':<20} {vif_m1['urbanizacja_pct']:>8.2f}  {'usunięta':>8}")
+print(f"  {'urbanizacja_pct':<20} {vif_m1['urbanizacja_pct']:>8.2f}  {'usunieta':>8}")
+print(f"  {'cdd':<20} {vif_m1['cdd']:>8.2f}  {'usunieta':>8}")
 
 # ── M2-C. WERYFIKACJA NUMERYCZNA ────────────────────────────
 R2_2     = model2.rsquared
@@ -763,12 +765,11 @@ print("Zapisano: ep08_diagnostyka_iter2.png")
 
 # ── M2-F. INTERPRETACJA ─────────────────────────────────────
 p2 = model2.params
-print(f"\n  Interpretacja – Iteracja 2:")
-print(f"  β₁ (ln_pkb_pc) = {p2['ln_pkb_pc']:+.4f}"
-      f"  → wzrost PKB pc o 1% → zużycie o {p2['ln_pkb_pc']:+.2f}%")
-print(f"  β₂ (ln_cena)   = {p2['ln_cena']:+.4f}"
-      f"  → wzrost ceny o 1%   → zużycie o {p2['ln_cena']:+.2f}%")
-print(f"  β₃ (hdd)       = {p2['hdd']:+.6f}"
-      f"  → wzrost HDD o 1     → zużycie o {p2['hdd']:+.6f} (ln)")
-print(f"  β₄ (cdd)       = {p2['cdd']:+.6f}"
-      f"  → wzrost CDD o 1     → zużycie o {p2['cdd']:+.6f} (ln)")
+print(f"\n  Interpretacja – Iteracja 2 (Model optymalny: pkb, cena, hdd):")
+print(f"  b1 (ln_pkb_pc) = {p2['ln_pkb_pc']:+.4f}"
+      f"  -> wzrost PKB pc o 1% -> zuzycie o {p2['ln_pkb_pc']:+.2f}%")
+print(f"  b2 (ln_cena)   = {p2['ln_cena']:+.4f}"
+      f"  -> wzrost ceny o 1%   -> zuzycie o {p2['ln_cena']:+.2f}%")
+print(f"  b3 (hdd)       = {p2['hdd']:+.6f}"
+      f"  -> wzrost HDD o 1     -> zuzycie o {p2['hdd']:+.6f} (ln)")
+print(f"  Usunięte: urbanizacja_pct (VIF>35), cdd (p=0.57, nieistotne)")

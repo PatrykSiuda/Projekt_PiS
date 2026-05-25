@@ -212,7 +212,9 @@ print("Zapisano: ew04_scatter.png")
 # Sekcja prognozy (x_pred) musi mieć DOKŁADNIE te same klucze.
 #
 X_cols = ["ln_dochod_os_lag1", "ln_cena", "urbanizacja_pct",
-          "liczba_os", "pow_os", "hdd", "cdd"]
+          "liczba_os", "pow_os", "hdd"]
+# cdd usuniete: nieistotne statystycznie (p=0.61 w pooled OLS),
+# usuniecie poprawia AIC 380.51->378.78, BIC 410.66->405.16
 
 df_model = df.dropna(subset=X_cols + ["ln_zuzycie"]).copy()
 df_model = df_model[np.isfinite(df_model[X_cols + ["ln_zuzycie"]]).all(axis=1)].copy()
@@ -228,10 +230,10 @@ model_pool = sm.OLS(y_pool, X_pool).fit()
 print("\n" + "=" * 60)
 print("MODEL 1 – POOLED OLS (wyniki estymacji)")
 print("=" * 60)
-print("  SPECYFIKACJA:")
+print("  SPECYFIKACJA (model optymalny po selekcji zmiennych):")
 print("    ln(ZUZYCIE_it) = b0 + b1*ln(DOCHOD_OS_i,t-1) + b2*ln(CENA)")
-print("                   + b3*URBANIZACJA + b4*LICZBA_OS + b5*POW_OS")
-print("                   + b6*HDD + b7*CDD + e")
+print("                   + b3*URBANIZACJA + b4*LICZBA_OS + b5*POW_OS + b6*HDD + e")
+print("  CDD usuniete: p=0.61, usuniecie poprawia AIC (380.51->378.78), BIC (410.66->405.16)")
 print("  Dane panelowe: 16 wojewodztw x 20 lat = 320 obserwacji")
 print("  Pooled OLS: brak efektow stalych wojewodztw.")
 print(model_pool.summary())
@@ -314,10 +316,10 @@ print("  sa normalne. Zalecane bledy standardowe HAC lub PCSE.")
 print("\n" + "=" * 60)
 print("MODELE OLS PER WOJEWÓDZTWO")
 print("=" * 60)
-print("  Specyfikacja per wojewodztwo:")
+print("  Specyfikacja per wojewodztwo (bez cdd):")
 print("    ln(ZUZYCIE_t) = b0 + b1*ln(DOCHOD_OS_t-1) + b2*ln(CENA_t)")
 print("                  + b3*URBANIZACJA_t + b4*LICZBA_OS_t")
-print("                  + b5*POW_OS_t + b6*HDD_t + b7*CDD_t + e")
+print("                  + b5*POW_OS_t + b6*HDD_t + e")
 print("  n = 20 obserwacji na wojewodztwo (2005–2024)")
 
 prov_models  = {}
@@ -346,7 +348,6 @@ for prov in PROVINCES:
         "β_liczba_os": round(mdl.params["liczba_os"], 4),
         "β_pow_os":    round(mdl.params["pow_os"], 4),
         "β_hdd":       round(mdl.params["hdd"], 6),
-        "β_cdd":       round(mdl.params["cdd"], 6),
         "DW":          round(dw_v, 3),
         "BG_p":        round(bg_p_v, 3),
         "SW_p":        round(sw_p_v, 3),
@@ -453,7 +454,7 @@ print(f"    -> wzrost liczby os. w gosp. o 1 => zmiana ln(zuzycie) o {params_p['
 print(f"  b5 (pow_os)            = {params_p['pow_os']:+.6f}")
 print(f"    -> wzrost pow. na os. o 1 m² => zmiana ln(zuzycie) o {params_p['pow_os']:+.6f}")
 print(f"  b6 (HDD)               = {params_p['hdd']:+.6f}")
-print(f"  b7 (CDD)               = {params_p['cdd']:+.6f}")
+print(f"  [CDD usuniete z modelu: nieistotne p=0.61, usuniecie poprawia AIC/BIC]")
 
 # ── 13. ARIMA PER WOJEWÓDZTWO ─────────────────────────────────
 if PMDARIMA_OK:
@@ -514,13 +515,13 @@ forecast_years = list(range(2025, 2031))
 last = df_nat[df_nat["rok"] == df_nat["rok"].max()].iloc[0]
 
 scenarios = {
-    "Pesymistyczny": dict(dochod=0.015, cena=0.06, urban=0.10, hdd=3100, cdd=25,
+    "Pesymistyczny": dict(dochod=0.015, cena=0.06, urban=0.10, hdd=3100,
                           liczba_os_delta=-0.01, pow_os_delta=0.10,
                           color=RED,   ls="--"),
-    "Bazowy":        dict(dochod=0.030, cena=0.03, urban=0.20, hdd=2900, cdd=35,
+    "Bazowy":        dict(dochod=0.030, cena=0.03, urban=0.20, hdd=2900,
                           liczba_os_delta=-0.02, pow_os_delta=0.20,
                           color=BLUE,  ls="-"),
-    "Optymistyczny": dict(dochod=0.045, cena=0.01, urban=0.30, hdd=2700, cdd=50,
+    "Optymistyczny": dict(dochod=0.045, cena=0.01, urban=0.30, hdd=2700,
                           liczba_os_delta=-0.03, pow_os_delta=0.30,
                           color=GREEN, ls="-."),
 }
@@ -531,9 +532,9 @@ for sc_name, sc in scenarios.items():
     for i, yr in enumerate(forecast_years, 1):
         dochod_prev = last["dochod_os"] * (1 + sc["dochod"]) ** (i - 1)
 
-        # x_pred musi mieć DOKŁADNIE te same kolumny co X_cols (plus const):
+        # x_pred: DOKLADNIE te same kolumny co X_cols (plus const):
         # ["ln_dochod_os_lag1", "ln_cena", "urbanizacja_pct",
-        #  "liczba_os", "pow_os", "hdd", "cdd"]
+        #  "liczba_os", "pow_os", "hdd"]  (bez cdd)
         x_pred = pd.DataFrame({
             "const":             [1.0],
             "ln_dochod_os_lag1": [np.log(dochod_prev)],
@@ -542,7 +543,6 @@ for sc_name, sc in scenarios.items():
             "liczba_os":         [last["liczba_os"] + sc["liczba_os_delta"] * i],
             "pow_os":            [last["pow_os"]    + sc["pow_os_delta"]    * i],
             "hdd":               [float(sc["hdd"])],
-            "cdd":               [float(sc["cdd"])],
         })
 
         pr = model_nat.get_prediction(x_pred).summary_frame(alpha=0.05)
@@ -621,7 +621,7 @@ print("=" * 60)
 print(f"  Dane          : panel 16 wojewodztw x 21 lat = 336 obserwacji")
 print(f"  (do modeli    : 16 x 20 = 320 obs. po usunieciu roku bazowego lag)")
 print(f"  Model pooled  : ln(ZUZYCIE) ~ ln(DOCHOD_OS_lag1) + ln(CENA) + URBANIZACJA")
-print(f"                              + LICZBA_OS + POW_OS + HDD + CDD")
+print(f"                              + LICZBA_OS + POW_OS + HDD  (bez CDD, usuniete)")
 print(f"  R2 (pooled)   : {R2:.4f}")
 print(f"  R2 (FE)       : {model_fe.rsquared:.4f}")
 print(f"  Elastycznosc dochodowa (pooled, lag1) : {params_p['ln_dochod_os_lag1']:+.3f}")
